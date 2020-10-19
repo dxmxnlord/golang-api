@@ -28,14 +28,6 @@ type Participant struct {
 }
 
 /*
-	function Meeting.()
-	@purpose
-	@params:
-	@description:
-	@return:
-*/
-
-/*
 	function Meeting.createMeeting()
 	@purpose:
 		inserts meeting object into collection
