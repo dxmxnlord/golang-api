@@ -47,6 +47,7 @@ type Participant struct {
 		perform checks:
 			ensure starttime is before the end time
 			for each participant in the meeting:
+				ensure email is used only once
 				ensure email is in right format
 				ensure meetings are not be overlapped for participant (if rsvp is yes)
 				ensure rsvp is in chosen values
@@ -70,9 +71,19 @@ func (meeting *Meeting) createMeeting (db *mongo.Database) (*mongo.InsertOneResu
 		return nil, errors.New("Start time is not before End time")
 	}
 
+	var emails map[string]bool = map[string]bool{}
+
 	for i:=0;i<len(meeting.Participants);i++ {
 		// get a participant
 		participant := meeting.Participants[i]
+
+		// ensure only one email of each participant
+		_,ok := emails[participant.Email]
+		if ok == true {
+			return nil, errors.New("Repeated email found")
+		} else {
+			emails[participant.Email] = true;
+		}
 
 		// check email format
 		match, _ := regexp.MatchString("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$", participant.Email)
@@ -112,7 +123,7 @@ func (meeting *Meeting) createMeeting (db *mongo.Database) (*mongo.InsertOneResu
 			 		// meeting starting during another meeting
 			 		bson.M{
 			 			"start_time" : bson.M{
-			 				"$gte" : meeting.StartTime,
+			 				"$lte" : meeting.StartTime,
 			 			},
 			 			"end_time" : bson.M{
 			 				"$gt": meeting.StartTime,

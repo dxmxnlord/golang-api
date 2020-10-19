@@ -49,7 +49,7 @@ The next thing I did was find out common ways to design and API using golang. Af
 + `mongo-driver/bson` for using stored bson data
 + mongo cluster on Atlas
 
-After that I designed the structure of the Meeting Record to be stored in the Mongo collection. The Meeting struct has an array of embedded Participant structs like an array of embedded documents in mongo. All the fields except the Id cannot be ommited, and the starting time, ending time, and created time are all of type `time.Time`. This standardizes all times and also makes querying and saving documents based on time easier since we can avoid conversions from RFC822 to mongo's ISODate as mongo recongnizes time.Time as a standard.
+After that I designed the structure of the Meeting Record to be stored in the Mongo collection. The Meeting struct has an array of embedded Participant structs like an array of embedded documents in mongo. All the fields except the Id, CreatedAt, and Participants cannot be ommited, and the starting time, ending time, and created time are all of type `time.Time`. This standardizes all times and also makes querying and saving documents based on time easier since we can avoid conversions from RFC to mongo's ISODate as mongo recongnizes time.Time as a standard.
 
 ```golang
 type Meeting struct {
@@ -57,7 +57,7 @@ type Meeting struct {
 	Title string `json:"title" bson:"title"`
 	StartTime time.Time `json:"start_time" bson:"start_time"`
 	EndTime time.Time `json:"end_time" bson:"end_time"`
-	CreatedAt time.Time `json:"created_at" bson:"created_at"`
+	CreatedAt time.Time `json:"created_at,omitempty" bson:"created_at,omitempty"`
 	Participants []Participant `json:"participants,omitempty" bson:"participants,omitempty"`
 }
 

@@ -15,10 +15,6 @@ import (
 
 )
 
-// var mongoURI string = "mongodb+srv://test_user:user123@cluster0.qk8zc.mongodb.net/appointy-api?retryWrites=true&w=majority"
-var mongoURI string = "mongodb+srv://testuser:user123@cluster0.gltu3.gcp.mongodb.net/appointy-api?retryWrites=true&w=majority"
-
-
 /*
 	type Api - describes application
 	@attributes:
@@ -47,19 +43,22 @@ func (api *Api) Run(addr string) {
 
 /*
 	function Api.Init()
-	@params: none
+	@params: 
+		dbName - name of the database
 	@description: 
 		Initializes the application. This includes connecting to the mongoDb cluster, creating an instance of the mux router and setting the pageSize value
 */
 
-func (api* Api) Init(){
+func (api* Api) Init(dbName string){
 	fmt.Println("Initializing....")
+
+	var mongoURI string = "mongodb+srv://testuser:user123@cluster0.gltu3.gcp.mongodb.net/" + dbName + "?retryWrites=true&w=majority"
 	
 	// setup connection with mongoDb cluster
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
 	if err != nil { log.Fatal(err) }
-	api.Db = client.Database("appointy-api")
+	api.Db = client.Database(dbName)
 	fmt.Println("Connected to MongoDB!")
 
 	// setup new mux router and add routes
@@ -119,6 +118,7 @@ func (api* Api) createMeeting(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 		// failure
 		errorResponse(w, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// success
@@ -148,10 +148,12 @@ func (api *Api) getMeetings(w http.ResponseWriter, r *http.Request) {
 	st_time, err := time.Parse("2006-01-02T15:04:05Z", params["start"])
 	if err != nil {
 	    errorResponse(w, http.StatusInternalServerError, err.Error())
+	    return
 	}
 	en_time, err := time.Parse("2006-01-02T15:04:05Z", params["end"])
 	if err != nil {
 	    errorResponse(w, http.StatusInternalServerError, err.Error())
+	    return
 	}
 
 	// check for pagination and get page
