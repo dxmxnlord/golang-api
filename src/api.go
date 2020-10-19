@@ -179,19 +179,19 @@ func (api *Api) getMeetings(w http.ResponseWriter, r *http.Request) {
 	// parse times
 	st_time, err := time.Parse("2006-01-02T15:04:05Z", start)
 	if err != nil {
-	    errorResponse(w, http.http.StatusBadRequest, err.Error())
+	    errorResponse(w, http.StatusBadRequest, err.Error())
 	    return
 	}
 	en_time, err := time.Parse("2006-01-02T15:04:05Z", end)
 	if err != nil {
-	    errorResponse(w, http.http.StatusBadRequest, err.Error())
+	    errorResponse(w, http.StatusBadRequest, err.Error())
 	    return
 	}
 
 	// check for pagination and get page
 	page, err := strconv.Atoi(r.FormValue("page"))
 	if err != nil && r.FormValue("page") != "" {
-		errorResponse(w, http.http.StatusBadRequest, "Invalid page value")
+		errorResponse(w, http.StatusBadRequest, "Invalid page value")
 		return
 	}
 	if r.FormValue("page") == "" {
@@ -201,7 +201,7 @@ func (api *Api) getMeetings(w http.ResponseWriter, r *http.Request) {
 	// call aux method to query database
 	meetings, err := getMeetings(api.Db,st_time,en_time,page,api.pageSize)
 	if err != nil {
-		errorResponse(w, http.http.StatusInternalServerError, err.Error())
+		errorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -237,7 +237,7 @@ func (api *Api) getMeetingsParticipant(w http.ResponseWriter, r *http.Request) {
 	// check for pagination
 	page, err := strconv.Atoi(r.FormValue("page"))
 	if err != nil && r.FormValue("page") != "" {
-		errorResponse(w, http.http.StatusBadRequest, "Invalid page value")
+		errorResponse(w, http.StatusBadRequest, "Invalid page value")
 		return
 	}
 	if r.FormValue("page") == "" {

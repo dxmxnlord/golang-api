@@ -22,7 +22,6 @@ Follow these steps:
 git clone golang-api
 cd golang-api/src
 
-go get gorilla/mux
 go get go.mongodb.org/mongo-driver/mongo
 go get go.mongodb.org/mongo-driver/bson
 
@@ -49,10 +48,11 @@ This was my first time using golang ( not my first time designing REST Apis and 
 
 The next thing I did was find out common ways to design and API using golang. After some searching and analysing pros and cons, I decided on the following stack:
 
-+ `gorilla/mux` for Routing the requests (highly flexible)
++ `net/http` for Routing the requests
 + `mongo-driver/mongo` for interacting with mongoDb
 + `mongo-driver/bson` for using stored bson data
 + mongo cluster on Atlas
++ "testing" for writing unit tests
 
 After that I designed the structure of the Meeting Record to be stored in the Mongo collection. The Meeting struct has an array of embedded Participant structs like an array of embedded documents in mongo. All the fields except the Id, CreatedAt, and Participants cannot be ommited, and the starting time, ending time, and created time are all of type `time.Time`. This standardizes all times and also makes querying and saving documents based on time easier since we can avoid conversions from RFC to mongo's ISODate as mongo recongnizes time.Time as a standard.
 
@@ -76,12 +76,17 @@ type Participant struct {
 The next step was to design the API itself. While doing this, I had to do a lot of research and seaching stackoverflow for questions that arose and errors I got. Here are some of the references I used while designing the API and SO links that helped solve some problems I had.
 
 + [golang documentation](https://tour.golang.org/welcome/1)
-+ [mux documentation](https://godoc.org/github.com/scyth/go-webproject/gwp/libs/gorilla/mux)
++ [net/http documentation](https://golang.org/pkg/net/http)
 + [parsing Dates in golang](https://golangcode.com/parsing-dates/)
 + [intoduction to the golang mongo-driver](https://www.mongodb.com/blog/post/mongodb-go-driver-tutorial)
 + [conversion between error and string](https://stackoverflow.com/questions/22170942/how-to-get-error-message-in-a-string-in-golang)
 + [running multiple go files](https://stackoverflow.com/questions/28081486/how-can-i-go-run-a-project-with-multiple-files-in-the-main-package)
 + [golang time and mongodb time](https://stackoverflow.com/questions/49657422/using-time-time-in-mongodb-record)
++ [writing tests](https://blog.alexellis.io/golang-writing-unit-tests/)
+
+Then, after designing an Api I was happy with, I wrote some basic unit tests on the route handlers using the "testing" package where I sent some http requests to the Api endpoints and validated that the appropriate catch was triggered.
+
+## File structure and Explanation
 
 I spread the API code into 4 files:
 
@@ -102,7 +107,7 @@ I spread the API code into 4 files:
 
 ### `api.go`
 
-The Api type defines the router, database, and pageSize as its members. 
+The Api type defines the database, and pageSize as its members. 
 
 Upon calling the `Api.Init()` function, the connection with mongodb is set up and the database field is set. The router is initialized and the routes are created by calling the `Api.createRoutes()` function. Lastly the pageSize is set.
 
@@ -111,6 +116,8 @@ The `Api.Run()` function starts the server.
 The `Api.createRoutes()` function creates the routes of the api and binds the routes to the appropriate handler functions
 
 The `Api.createMeeting()` is the handler function for creating the meeting. It decodes the json body into a Meeting variable and calls the `Method.createMeeting()` function to insert the meeting record. Then it calls the helper functions to send the response.
+
+The `Api.getMeetingsHandler()` is a middle handler that chooses which handler to call based on the type of request recieved and query parameters recieved.
 
 The `Api.getMeetings()` is the handler function to query meetings between a start time and a end time and also takes an optional url parameter that paginates the response (if "page" is found on the url path). This function first converts both times into `time.Time` format and checks if pagination is to be done and then and then calls the `getMeetings()` method in `meeting.go` which queries the collection and returns an array of Meeting objects that are passed to the helper functions to give as response.
 
@@ -231,6 +238,10 @@ The `jsonResponse()` sends a response after marshalling the data send to it with
 The `errorResponse()` sends an error message as a response.
 
 ### `main_test.go`
+
+Each Test creates a Http request and validates the response from the server based on what is expected from the server for the data it sent. Here is the output I got for each test (in the same order as bw.
+
+![](img/tests.png)
 
 | Function                                                                  | Purpose                                                                     |
 |---------------------------------------------------------------------------|-----------------------------------------------------------------------------|

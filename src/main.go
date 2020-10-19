@@ -13,5 +13,4 @@ func main() {
 	api := Api{}
 	api.Init("appointy-api")
 	api.Run(":8080")
-	// fmt.Println(app)
 }
