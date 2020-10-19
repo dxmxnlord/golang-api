@@ -14,6 +14,12 @@ This project was made as a submission for the Appointy Task 1 internship selecti
 	+ Add pagination to the list endpoint
 	+ Add unit tests
 
++ Tasks completed:
+	+ All endpoints working with proper parameters
+	+ Overlapping constraint
+	+ Pagination for list endpoints
+	+ Basic unit tests
+
 ## How to run
 
 Follow these steps:
