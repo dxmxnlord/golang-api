@@ -36,14 +36,13 @@ func dropDatabase() {
 
 func newReq(req *http.Request) *httptest.ResponseRecorder {
 	recorder := httptest.NewRecorder()
-	api.Router.ServeHTTP(recorder, req)
-
+	http.DefaultServeMux.ServeHTTP(recorder, req)
 	return recorder
 }
 
-func checkResStatus(t *testing.T, expected, actual int) {
-	if expected != actual {
-		t.Errorf("Expected response code %d. Got %d\n", expected, actual)
+func checkResStatus(t *testing.T, expect, actual int) {
+	if expect != actual {
+		t.Errorf("Expected %d status. Got %d status instead \n", expect, actual)
 	}
 }
 

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -18,13 +17,11 @@ import (
 /*
 	type Api - describes application
 	@attributes:
-		Router - mux router instance
 		Db - MongoDb database instance
 		pageSize - max size of each page for pagination
 */
 
 type Api struct {
-	Router *mux.Router
 	Db *mongo.Database
 	pageSize int
 }
@@ -34,11 +31,11 @@ type Api struct {
 	@params: 
 		addr - port
 	@description: 
-		Runs the application on localhost:addr by starting the mux Router
+		Runs the application on localhost:addr 
 */
 
 func (api *Api) Run(addr string) {
-	log.Fatal(http.ListenAndServe(addr, api.Router))
+	log.Fatal(http.ListenAndServe(addr, nil))
 }
 
 /*
@@ -61,8 +58,7 @@ func (api* Api) Init(dbName string){
 	api.Db = client.Database(dbName)
 	fmt.Println("Connected to MongoDB!")
 
-	// setup new mux router and add routes
-	api.Router = mux.NewRouter()
+	// setup routes
 	api.createRoutes()
 
 	// setup pagesize
@@ -70,19 +66,48 @@ func (api* Api) Init(dbName string){
 }
 
 /*
-	function Api.createRoutes
+	function Api.createRoutes()
 	@params: none
 	@description:
 		Add route handlers for the various Api routes. 
 		Routes are either only POST or GET or both.
-		Some routes take query parameters which is achieved with mux.Router.Queries
+		Some routes take query parameters which is multiplexed through a middle handler `Api.getMeetingsHandler()`
 */
 
 func (api* Api) createRoutes() {
-	api.Router.HandleFunc("/api/meetings",api.getMeetingsParticipant).Queries("email","{email}").Methods("GET")
-	api.Router.HandleFunc("/api/meetings",api.getMeetings).Queries("start","{start}").Queries("end","{end}").Methods("GET")
-	api.Router.HandleFunc("/api/meeting",api.getMeeting).Queries("id", "{id}").Methods("GET")
-	api.Router.HandleFunc("/api/meetings",api.createMeeting).Methods("POST")
+	http.HandleFunc("/api/meeting", api.getMeeting)
+	http.HandleFunc("/api/meetings", api.getMeetingsHandler)
+}
+
+/*
+	function Api.getMeetingsHandler()
+	@purpose:
+		decide which handler to call for the path based on request type and params
+	@params:
+		http.ResponseWriter - for giving back a response
+		http.Request - the original http request
+	@description:
+		If the method is a POST request, call the `Api.createMeeting()` handler
+		If the method is GET:
+			If the params are only email call the `Api.getMeetingsParticipant()` handler
+			If the params are only start and end times call the `Api.getMeetings()` handler
+		Else return an error response
+*/
+
+func (api* Api) getMeetingsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "POST" {
+		api.createMeeting(w,r)
+	} else if r.Method == "GET" {
+		if r.FormValue("email") != "" && r.FormValue("start") == ""  && r.FormValue("end") == "" {
+			api.getMeetingsParticipant(w,r)
+		} else if r.FormValue("email") == "" && r.FormValue("start") != "" && r.FormValue("end") != ""{
+			api.getMeetings(w,r)
+		} else {
+			errorResponse(w,http.StatusBadRequest,"Invalid query parameters")
+		}
+	} else {
+		errorResponse(w,http.StatusMethodNotAllowed,"Invalid Request Method for this endpoint")
+	}
 }
 
 /*
@@ -133,7 +158,7 @@ func (api* Api) createMeeting(w http.ResponseWriter, r *http.Request) {
 		http.ResponseWriter - for giving back a response
 		http.Request - the original http request
 	@description:
-		Get the query params from the url with mux.Vars()
+		Get the query params start and end from the url and check if they exist
 		Parse the times into time.Time type inorder to compare with the times in the collection documents
 		Check if pagination is to be done and retrieve the page count if so
 		Call the getMeetings method to query the collection for meetings and pass the time range and page as params
@@ -142,24 +167,31 @@ func (api* Api) createMeeting(w http.ResponseWriter, r *http.Request) {
 */
 
 func (api *Api) getMeetings(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
+	
+	start := r.FormValue("start")
+	end := r.FormValue("end")
+
+	if start == "" || end == "" {
+		errorResponse(w,http.StatusBadRequest,"Missing starting or Ending time")
+		return
+	}
 
 	// parse times
-	st_time, err := time.Parse("2006-01-02T15:04:05Z", params["start"])
+	st_time, err := time.Parse("2006-01-02T15:04:05Z", start)
 	if err != nil {
-	    errorResponse(w, http.StatusInternalServerError, err.Error())
+	    errorResponse(w, http.http.StatusBadRequest, err.Error())
 	    return
 	}
-	en_time, err := time.Parse("2006-01-02T15:04:05Z", params["end"])
+	en_time, err := time.Parse("2006-01-02T15:04:05Z", end)
 	if err != nil {
-	    errorResponse(w, http.StatusInternalServerError, err.Error())
+	    errorResponse(w, http.http.StatusBadRequest, err.Error())
 	    return
 	}
 
 	// check for pagination and get page
 	page, err := strconv.Atoi(r.FormValue("page"))
 	if err != nil && r.FormValue("page") != "" {
-		errorResponse(w, http.StatusInternalServerError, "Invalid page value")
+		errorResponse(w, http.http.StatusBadRequest, "Invalid page value")
 		return
 	}
 	if r.FormValue("page") == "" {
@@ -169,7 +201,7 @@ func (api *Api) getMeetings(w http.ResponseWriter, r *http.Request) {
 	// call aux method to query database
 	meetings, err := getMeetings(api.Db,st_time,en_time,page,api.pageSize)
 	if err != nil {
-		errorResponse(w, http.StatusInternalServerError, err.Error())
+		errorResponse(w, http.http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -186,7 +218,7 @@ func (api *Api) getMeetings(w http.ResponseWriter, r *http.Request) {
 		http.ResponseWriter - for giving back a response
 		http.Request - the original http request
 	@description:
-		Get the query params from the url with mux.Vars()
+		Get the query param email from the url and check if t exists
 		Check if pagination is to be done and retrieve the page count if so
 		Call the getMeetingsParticipant method to query the collection for meetings and pass the email and page as params
 
@@ -196,13 +228,16 @@ func (api *Api) getMeetings(w http.ResponseWriter, r *http.Request) {
 func (api *Api) getMeetingsParticipant(w http.ResponseWriter, r *http.Request) {
 
 	// get url params
-	params := mux.Vars(r)
-	email := params["email"]
+	email := r.FormValue("email")
+	if email == "" {
+		errorResponse(w,http.StatusBadRequest,"Missing email parameter")
+		return
+	}
 
 	// check for pagination
 	page, err := strconv.Atoi(r.FormValue("page"))
 	if err != nil && r.FormValue("page") != "" {
-		errorResponse(w, http.StatusInternalServerError, "Invalid page value")
+		errorResponse(w, http.http.StatusBadRequest, "Invalid page value")
 		return
 	}
 	if r.FormValue("page") == "" {
@@ -227,7 +262,8 @@ func (api *Api) getMeetingsParticipant(w http.ResponseWriter, r *http.Request) {
 		http.ResponseWriter - for giving back a response
 		http.Request - the original http request
 	@description:
-		Get the query params from the url with mux.Vars()
+		Check if the method is GET, else return error response
+		Get the query params from the url and check if id param exists
 		Convert id parameter to mongoDb objectId
 		Create the response Meeting object with Id initialized
 		Call Meeting.getMeeting method to populate the response Meeting object
@@ -237,22 +273,31 @@ func (api *Api) getMeetingsParticipant(w http.ResponseWriter, r *http.Request) {
 
 func (api *Api) getMeeting(w http.ResponseWriter, r *http.Request) {
 
-	// get url params
-	params := mux.Vars(r)
-	id, _ := primitive.ObjectIDFromHex(params["id"])
+	if r.Method == "GET" {
 
-	meeting := Meeting{ID:id}
-
-	// populate meeting object
-	if err := meeting.getMeeting(api.Db); err != nil {
-			switch err {
-			case mongo.ErrNoDocuments:
-				errorResponse(w, http.StatusNotFound, "Meeting not found")
-			default:
-				errorResponse(w, http.StatusInternalServerError, err.Error())
-			}
-			return
+		// get url params
+		id := r.FormValue("id")
+		if id == "" {
+			errorResponse(w,http.StatusBadRequest,"No Id found")
+			return 
 		}
+		mongoid, _ := primitive.ObjectIDFromHex(id)
 
-	jsonResponse(w, http.StatusOK, meeting)
+		meeting := Meeting{ID:mongoid}
+
+		// populate meeting object
+		if err := meeting.getMeeting(api.Db); err != nil {
+				switch err {
+				case mongo.ErrNoDocuments:
+					errorResponse(w, http.StatusNotFound, "Meeting not found")
+				default:
+					errorResponse(w, http.StatusInternalServerError, err.Error())
+				}
+				return
+			}
+
+		jsonResponse(w, http.StatusOK, meeting)
+	} else {
+		errorResponse(w,http.StatusMethodNotAllowed,"Invalid Request Method for this endpoint")
+	}
 }
