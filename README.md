@@ -26,7 +26,12 @@ go get gorilla/mux
 go get go.mongodb.org/mongo-driver/mongo
 go get go.mongodb.org/mongo-driver/bson
 
-go run *.go
+# run tests
+go test
+
+# run application
+go run !(*_test).go
+
 ```
 
 ## Routes
@@ -92,6 +97,8 @@ I spread the API code into 4 files:
 	+ has the auxillary handlers to query and insert into database collection
 + helpers.go
 	+ defines helper functions for getting context, and wrappers for sending responses
++ main_test.go
+	+ unit tests
 
 ### `api.go`
 
@@ -154,7 +161,7 @@ bson.M{
  		// meeting starting during another meeting
  		bson.M{
  			"start_time" : bson.M{
- 				"$gte" : meeting.StartTime,
+ 				"$lte" : meeting.StartTime,
  			},
  			"end_time" : bson.M{
  				"$gt": meeting.StartTime,
@@ -222,3 +229,16 @@ The `getContext()` returns a new context with a timeout.
 The `jsonResponse()` sends a response after marshalling the data send to it with an appropriate status.
 
 The `errorResponse()` sends an error message as a response.
+
+### `main_test.go`
+
+| Function                                                                  | Purpose                                                                     |
+|---------------------------------------------------------------------------|-----------------------------------------------------------------------------|
+| TestGetMeetingThatDoesNotExist                                            | Check if trying to get a non existent meeting returns the appropriate error |
+| TestCreateMeeting                                                         | Check if a Meeting gets created                                             |
+| TestCreateMeetingRepeatedEmail                                            | Check for repeating participant emails in the creation of a Meeting         |
+| TestCreateMeetingGreaterStartTime                                         | Check if starting time is after than ending time                            |
+| TestCreateMeetingInvalidEmail                                             | Check if participant email is of invalid format                             |
+| TestCreateMeetingParticipantInOverlappingMeetingsWhereMeetingStartsBefore | Check for overlapping meetings                                              |
+| TestCreateMeetingParticipantInOverlappingMeetingsWhereMeetingEndsAfter    | Check for overlapping meetings                                              |
+| TestCreateMeetingParticipantInOverlappingMeetingsWhereMeetingInBetween    | Check for overlapping meetings                                              |
