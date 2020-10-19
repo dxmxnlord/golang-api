@@ -19,13 +19,14 @@ This project was made as a submission for the Appointy Task 1 internship selecti
 	+ Overlapping constraint
 	+ Pagination for list endpoints
 	+ Basic unit tests
+	+ Thread Safe (on experimental branch)
 
 ## How to run
 
 Follow these steps:
 
 ```bash
-git clone golang-api
+git clone https://github.com/dxmxnlord/golang-api
 cd golang-api/src
 
 go get go.mongodb.org/mongo-driver/mongo
@@ -50,7 +51,7 @@ go run !(*_test).go
 
 ## Approach and Design
 
-This was my first time using golang ( not my first time designing REST Apis and using MongoDb ), so I struggled initially to get a grasp on how APIs were designed in golang. The first thing I did was go through the golang tour in order to understand the syntax and data structures. After that I got quite confident in using the syntax to create structures and handlers. 
+This was my first time using golang ( not my first time designing REST APIs and using MongoDb ), so I struggled initially to get a grasp on how APIs were designed in golang. The first thing I did was go through the golang tour in order to understand the syntax and data structures. After that I got quite confident in using the syntax to create structures and handlers. 
 
 The next thing I did was find out common ways to design and API using golang. After some searching and analysing pros and cons, I decided on the following stack:
 
@@ -92,6 +93,12 @@ The next step was to design the API itself. While doing this, I had to do a lot 
 
 Then, after designing an Api I was happy with, I wrote some basic unit tests on the route handlers using the "testing" package where I sent some http requests to the Api endpoints and validated that the appropriate catch was triggered.
 
+All things considered, this was a fun project to work on, and It finally gave me an reason to dive deep into golang. I feel content having been able to accomplish this much in a domain I had no knowledge about before, and for that I would like to thank Appointy for this opportunity !
+
+##### Note
+
+I tried implementing the thread safe method, however I didnt get sufficient time to test it therefore I have created another branch for it named "experimental". In the thread safe version, every route got it's own Mutex. So only 1 thread can use a particular route handler at a time. Both threads wont interfere with each other since the first mutex is for the "/meeting" path which queries a particular document and the other route "/meetings" is for list operations and creating a new Document. Hence the are mutually independant and wont cause a deadlock.
+
 ## File structure and Explanation
 
 I spread the API code into 4 files:
@@ -113,7 +120,7 @@ I spread the API code into 4 files:
 
 ### `api.go`
 
-The Api type defines the database, and pageSize as its members. 
+The Api type defines the database, and pageSize (which is 2 by default) as its members. 
 
 Upon calling the `Api.Init()` function, the connection with mongodb is set up and the database field is set. The router is initialized and the routes are created by calling the `Api.createRoutes()` function. Lastly the pageSize is set.
 
