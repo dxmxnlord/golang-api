@@ -11,8 +11,11 @@ import (
 	"net/http"
 	"strconv"
 	"time"
-
+	"sync"
 )
+
+var routeLock1 sync.Mutex
+var routeLock2 sync.Mutex
 
 /*
 	type Api - describes application
@@ -95,6 +98,10 @@ func (api* Api) createRoutes() {
 */
 
 func (api* Api) getMeetingsHandler(w http.ResponseWriter, r *http.Request) {
+
+	routeLock1.Lock()
+	defer routeLock1.Unlock()
+
 	if r.Method == "POST" {
 		api.createMeeting(w,r)
 	} else if r.Method == "GET" {
@@ -272,6 +279,9 @@ func (api *Api) getMeetingsParticipant(w http.ResponseWriter, r *http.Request) {
 */
 
 func (api *Api) getMeeting(w http.ResponseWriter, r *http.Request) {
+
+	routeLock2.Lock()
+	defer routeLock2.Unlock()
 
 	if r.Method == "GET" {
 
